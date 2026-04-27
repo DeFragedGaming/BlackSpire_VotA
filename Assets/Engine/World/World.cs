@@ -13,18 +13,13 @@ public class World : MonoBehaviour
 
     public void Initialize()
     {
-        Debug.Log("World initialized — creating terrain chunk");
-
         CreateTerrainChunk(new Vector3Int(0, 0, 0));
     }
 
     void CreateTerrainChunk(Vector3Int coord)
     {
         if (terrainChunkPrefab == null)
-        {
-            Debug.LogError("TerrainChunk prefab is NOT assigned!");
             return;
-        }
 
         GameObject go = Instantiate(terrainChunkPrefab);
         go.transform.position = coord;
@@ -34,14 +29,11 @@ public class World : MonoBehaviour
 
         TerrainGenerator.Generate(chunk, coord);
 
-        Mesh mesh = DualContourMesher.BuildMesh(chunk);
+        
 
-        if (mesh.vertexCount == 0)
-        {
-            Debug.LogWarning("Generated mesh has NO vertices — density field may be wrong.");
-        }
+        MeshFilter mf = go.GetComponent<MeshFilter>();
+        MeshCollider mc = go.GetComponent<MeshCollider>();
 
-        go.GetComponent<MeshFilter>().mesh = mesh;
-        go.GetComponent<MeshCollider>().sharedMesh = mesh;
+        
     }
 }

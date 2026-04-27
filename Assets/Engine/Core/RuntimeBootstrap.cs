@@ -5,7 +5,6 @@ public class RuntimeBootstrap : MonoBehaviour
     void Awake()
     {
         Debug.Log("Bootstrap running");
-
         if (World.Instance != null)
         {
             Debug.Log("World found — initializing");
@@ -13,7 +12,7 @@ public class RuntimeBootstrap : MonoBehaviour
         }
         else
         {
-            Debug.LogError("World instance NOT found in scene");
+            Debug.LogError("World instance not found in scene.");
         }
     }
 }

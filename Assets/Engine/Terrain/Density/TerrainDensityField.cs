@@ -5,7 +5,6 @@ public class TerrainDensityField
     public readonly int sizeX;
     public readonly int sizeY;
     public readonly int sizeZ;
-
     public float[,,] density;
 
     public TerrainDensityField(int sx, int sy, int sz)
@@ -13,7 +12,6 @@ public class TerrainDensityField
         sizeX = sx;
         sizeY = sy;
         sizeZ = sz;
-
         density = new float[sx, sy, sz];
     }
 
