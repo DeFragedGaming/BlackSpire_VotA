@@ -1,141 +1,137 @@
-# BlackSpire_VotA  
-A next‑generation voxel survival engine built for harsh worlds, procedural exploration, and long‑term progression.
+# BlackSpire: Voxel of the Abyss  
+A next-generation voxel survival engine built for harsh worlds, procedural exploration, and long-term progression.
 
-BlackSpire_VotA is the core engine powering a fully dynamic survival sandbox world.  
-It combines smooth terrain, cubic structures, layered biomes, and a simulation‑driven environment into a scalable, studio‑grade framework.
+BlackSpire Voxel of the Abyss serves as the core engine for a fully dynamic survival sandbox experience. It combines smooth terrain, cubic voxel structures, layered biome systems, and a simulation-driven environment into a scalable, production-ready framework.
 
-This repository contains the engine code, world generation systems, voxel logic, and gameplay foundations for the BlackSpire project.
+This repository contains the engine code, world generation systems, voxel architecture, and foundational gameplay systems for the BlackSpire project.
 
 ---
 
-## 🌑 Overview
+## Overview
 
-BlackSpire_VotA is designed around:
+BlackSpire Voxel of the Abyss is designed around:
 
-- **Procedural terrain** with layered noise, biomes, and underground networks  
-- **Chunk‑based voxel streaming** for massive seamless worlds  
-- **Handcrafted and procedural structures** integrated into terrain  
-- **Survival systems** built around scarcity, exploration, and environmental danger  
-- **A modular engine architecture** that supports expansion and future content  
-- **A dark, atmospheric world tone** with environmental storytelling  
+- Procedural terrain with layered noise, biome blending, and underground generation  
+- Chunk-based voxel streaming for large, seamless worlds  
+- Integration of handcrafted and procedural structures within terrain  
+- Survival systems focused on scarcity, exploration, and environmental pressure  
+- A modular engine architecture built for extensibility and long-term development  
+- A cohesive, atmospheric world with environmental storytelling  
 
 This is a commercial project intended for future release.
 
 ---
 
-## ⚙️ Core Features
+## Core Features
 
-### **Terrain & World Generation**
-- Smooth terrain with cliffs, ridges, and badlands  
-- Multi‑pass noise system (height, moisture, temperature, biome blending)  
-- Underground caverns, tunnels, and void pockets  
-- Surface features: debris, ruins, foliage, rock formations  
-- Structure injection system for POIs, shelters, and world landmarks  
+### Terrain and World Generation
+- Blocky terrain featuring cliffs, ridges, and varied elevation  
+- Multi-pass noise system (height, moisture, temperature, biome blending)  
+- Underground systems including caverns, tunnels, and void pockets  
+- Surface detail generation such as debris, ruins, foliage, and rock formations  
+- Structure injection system for points of interest, shelters, and landmarks  
 
-### **Voxel Engine**
-- Infinite chunk streaming  
-- Optimized greedy meshing  
-- Mesh colliders generated per chunk  
-- Block registry with metadata  
-- Runtime material assignment  
-- Modular block definitions  
+### Voxel Engine
+- Continuous chunk streaming system  
+- Greedy meshing optimization  
+- Per-chunk mesh collider generation  
+- Block registry with extensible metadata  
+- Runtime material and texture assignment  
+- Modular block definition system  
 
-### **Survival Systems**
-- Player stats (health, stamina, hunger, hydration, temperature)  
-- Weight‑based inventory  
-- Crafting + resource processing (framework in place)  
-- Day/night cycle hooks  
-- Environmental hazards (heat, cold, radiation, corruption zones)
+### Survival Systems
+- Player stats including health, stamina, hunger, hydration, and temperature  
+- Weight-based inventory system  
+- Crafting and resource processing framework  
+- Day and night cycle hooks  
+- Environmental hazards such as heat, cold, radiation, and corruption zones  
 
-### **Runtime Asset Pipeline**
-- JSON‑driven block definitions  
+### Runtime Asset Pipeline
+- JSON-driven block and asset definitions  
 - Runtime texture atlas loading  
-- Hot‑reload friendly  
-- Supports modded textures, blocks, and materials  
+- Hot-reload friendly architecture  
+- Support for modded textures, blocks, and materials  
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
-/Assets
-  /Engine
-    /Blocks
-    /Chunks
-    /Core
-    /Player
-    /Rendering
-    /Terrain
-      /Chunks
-      /Density
-      /Generation
-      /Hermite
-      /Meshing
-      /World
-/Prefabs
-/Scenes
 
-This structure is intentionally modular to support expansion, refactoring, and future systems.
+Assets
+
+Editor
+Engine
+> Generation
+> Player
+> UI
+Generated
+Scenes
+Textures
+
+
+The project structure is modular and organized to support scalability, separation of systems, and future expansion.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 1. Clone the repository  
-2. Open the project in **Unity 2022 LTS**    
-3. Press Play to generate a new world  
+2. Open the project in Unity 2022 LTS  
+3. Load Scene
+4.Press Play to generate a new world  
 
 The engine will automatically:
-- Load block definitions    
+- Load block definitions  
 - Initialize world generation  
-- Stream chunks as the player moves  
+- Stream chunks based on player position  
 
 ---
 
-## 🧭 Roadmap
+## Roadmap
 
-### **Short‑Term**
-- Expanded biome suite  
+### Short-Term
+- Expanded biome variety  
 - Additional structure types (ruins, shelters, industrial remnants)  
-- Improved foliage + debris generation  
-- Crafting & workstation system  
-- Loot tables + container system  
+- Improved foliage and debris systems  
+- Crafting and workstation systems  
+- Loot tables and container mechanics  
 
-### **Mid‑Term**
-- Wildlife + hostile entities  
-- Weather simulation  
-- Temperature + clothing system  
-- Farming + food production  
+### Mid-Term
+- Wildlife and hostile entities  
+- Weather simulation systems  
+- Temperature and clothing mechanics  
+- Farming and food production  
 - Vehicle framework  
 
-### **Long‑Term**
+### Long-Term
 - Multiplayer support  
 - Modding API  
-- World events + dynamic threats  
-- Full survival progression loop  
+- Dynamic world events and threats  
+- Complete survival progression loop  
 
 ---
 
-## 🛡️ License
+## License
 
-**All Rights Reserved**
+All Rights Reserved
 
 This project is proprietary and may not be copied, modified, distributed, or used commercially without explicit written permission from the owner.
 
-If you are viewing this repository, you may:
-- Read the code  
-- Clone it locally for review  
+Permitted:
+- Viewing the code  
+- Cloning locally for review  
 
-You may **not**:
-- Redistribute it  
-- Modify and publish it  
-- Use it in your own commercial or non‑commercial projects  
-- Repackage or resell any part of it  
+Not permitted:
+- Redistribution  
+- Modification and republication  
+- Use in commercial or non-commercial projects  
+- Repackaging or resale of any part of the project  
 
-All rights belong to **CyberTrace Studios**.
+All rights belong to CyberTrace Studios.
 
 ---
 
-## 🖤 Credits
+## Credits
 
-Developed by **CyberTrace Studios**  
-Lead Developer: **Matthew Hammel**
+Developed by CyberTrace Studios  
+Lead Developer: Matthew Hammel
