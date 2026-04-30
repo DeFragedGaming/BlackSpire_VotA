@@ -2,10 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-[RequireComponent(
-typeof(MeshFilter),
-typeof(MeshRenderer),
-typeof(MeshCollider))]
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
 public class VoxelChunk : MonoBehaviour
 {
     public Vector2Int chunkCoord;
@@ -14,6 +11,7 @@ public class VoxelChunk : MonoBehaviour
 
     List<Vector3> vertices = new();
     List<int> triangles = new();
+    List<Color> colors = new();
 
     int vertexIndex;
 
@@ -39,10 +37,8 @@ public class VoxelChunk : MonoBehaviour
             int worldX = x + chunkCoord.x * VoxelData.ChunkWidth;
             int worldZ = z + chunkCoord.y * VoxelData.ChunkWidth;
 
-            float continent = Mathf.PerlinNoise(worldX * .01f, worldZ * .01f) * 30f;
-            float hills = Mathf.PerlinNoise(worldX * .04f, worldZ * .04f) * 10f;
-
-            int height = Mathf.FloorToInt(30 + continent + hills);
+            float heightNoise = Mathf.PerlinNoise(worldX * .03f, worldZ * .03f) * 20f;
+            int height = Mathf.FloorToInt(40 + heightNoise);
 
             for (int y = 0; y < VoxelData.ChunkHeight; y++)
             {
@@ -50,18 +46,29 @@ public class VoxelChunk : MonoBehaviour
                     voxelMap[x, y, z] = BlockType.Air;
                 else if (y == height)
                     voxelMap[x, y, z] = BlockType.Grass;
-                else if (y > height - 5)
+                else if (y > height - 4)
                     voxelMap[x, y, z] = BlockType.Dirt;
                 else
-                    voxelMap[x, y, z] = BlockType.Stone;
+                {
+                    // Simple ore generation
+                    float oreNoise = Mathf.PerlinNoise(worldX * .1f, worldZ * .1f);
+
+                    if (oreNoise > 0.75f && y < 50)
+                        voxelMap[x, y, z] = BlockType.IronOre;
+                    else if (oreNoise > 0.65f && y < 40)
+                        voxelMap[x, y, z] = BlockType.CoalOre;
+                    else
+                        voxelMap[x, y, z] = BlockType.Stone;
+                }
             }
         }
     }
 
-    public void BuildMesh()
+    void BuildMesh()
     {
         vertices.Clear();
         triangles.Clear();
+        colors.Clear();
         vertexIndex = 0;
 
         for (int x = 0; x < VoxelData.ChunkWidth; x++)
@@ -77,67 +84,62 @@ public class VoxelChunk : MonoBehaviour
 
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
+        mesh.colors = colors.ToArray();
 
         mesh.RecalculateNormals();
 
         GetComponent<MeshFilter>().mesh = mesh;
 
-        MeshCollider mc = GetComponent<MeshCollider>();
-        mc.sharedMesh = null;
-        mc.sharedMesh = mesh;
+        MeshCollider col = GetComponent<MeshCollider>();
+        col.sharedMesh = null;
+        col.sharedMesh = mesh;
     }
 
     void AddVoxelData(Vector3 pos)
     {
-        for (int p = 0; p < 6; p++)
+        for (int i = 0; i < 6; i++)
         {
-            if (CheckSolid(pos + VoxelData.faceChecks[p]))
-                continue;
+            Vector3 neighbor = pos + VoxelData.faceChecks[i];
 
-            triangles.Add(vertexIndex);
-            triangles.Add(vertexIndex + 1);
-            triangles.Add(vertexIndex + 2);
-
-            triangles.Add(vertexIndex + 2);
-            triangles.Add(vertexIndex + 1);
-            triangles.Add(vertexIndex + 3);
-
-            for (int i = 0; i < 4; i++)
+            if (!IsVoxelInChunk(neighbor) ||
+                voxelMap[(int)neighbor.x, (int)neighbor.y, (int)neighbor.z] == BlockType.Air)
             {
-                vertices.Add(
-                    pos +
-                    VoxelData.voxelVerts[
-                        VoxelData.voxelTris[p, i]
-                    ]
-                );
+                AddFace(pos, i);
             }
-
-            vertexIndex += 4;
         }
     }
 
-    bool CheckSolid(Vector3 pos)
+    void AddFace(Vector3 pos, int faceIndex)
     {
-        int x = (int)pos.x;
-        int y = (int)pos.y;
-        int z = (int)pos.z;
+        Color col = BlockColors.GetColor(
+            voxelMap[(int)pos.x, (int)pos.y, (int)pos.z]);
 
-        if (x < 0 || x >= VoxelData.ChunkWidth ||
-            y < 0 || y >= VoxelData.ChunkHeight ||
-            z < 0 || z >= VoxelData.ChunkWidth)
-            return false;
+        for (int i = 0; i < 4; i++)
+        {
+            vertices.Add(pos + VoxelData.voxelVerts[VoxelData.voxelTris[faceIndex, i]]);
+            colors.Add(col);
+        }
 
-        return voxelMap[x, y, z] != BlockType.Air;
+        triangles.Add(vertexIndex + 0);
+        triangles.Add(vertexIndex + 1);
+        triangles.Add(vertexIndex + 2);
+        triangles.Add(vertexIndex + 2);
+        triangles.Add(vertexIndex + 1);
+        triangles.Add(vertexIndex + 3);
+
+        vertexIndex += 4;
     }
 
-    // =========================
-    // 🧱 MINING SYSTEM (V1)
-    // =========================
-
-    public void RemoveBlock(Vector3 worldPos)
+    bool IsVoxelInChunk(Vector3 pos)
     {
-        Vector3 local =
-            transform.InverseTransformPoint(worldPos);
+        return pos.x >= 0 && pos.x < VoxelData.ChunkWidth &&
+               pos.y >= 0 && pos.y < VoxelData.ChunkHeight &&
+               pos.z >= 0 && pos.z < VoxelData.ChunkWidth;
+    }
+
+    public void RemoveBlock(Vector3 hitPoint, Vector3 normal)
+    {
+        Vector3 local = hitPoint - transform.position - normal * 0.01f;
 
         int x = Mathf.FloorToInt(local.x);
         int y = Mathf.FloorToInt(local.y);
@@ -149,9 +151,6 @@ public class VoxelChunk : MonoBehaviour
             return;
 
         voxelMap[x, y, z] = BlockType.Air;
-
         BuildMesh();
-
-        Debug.Log($"Block mined at {x},{y},{z}");
     }
 }

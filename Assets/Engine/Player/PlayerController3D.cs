@@ -113,26 +113,22 @@ public class PlayerController3D : MonoBehaviour
 
     
     void Mine()
+{
+    if (!Input.GetMouseButtonDown(0))
+        return;
+
+    Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+
+    if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
     {
-        if (!Input.GetMouseButtonDown(0))
-            return;
+        VoxelChunk chunk = hit.collider.GetComponent<VoxelChunk>();
 
-        Ray ray = new Ray(
-            playerCamera.position,
-            playerCamera.forward
-        );
-
-        if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
+        if (chunk != null)
         {
-            VoxelChunk chunk =
-                hit.collider.GetComponent<VoxelChunk>();
-
-            if (chunk != null)
-            {
-                chunk.RemoveBlock(hit.point);
-            }
+            chunk.RemoveBlock(hit.point, hit.normal);
         }
     }
+}
 
 
     void VoidCheck()
