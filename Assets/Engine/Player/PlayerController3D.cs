@@ -4,21 +4,21 @@ using UnityEngine;
 public class PlayerController3D : MonoBehaviour
 {
     [Header("Movement")]
-    public float moveSpeed=5.5f;
-    public float sprintSpeed=7.5f;
-    public float acceleration=14f;
-    public float airControl=.5f;
+    public float moveSpeed = 5.5f;
+    public float sprintSpeed = 7.5f;
+    public float acceleration = 14f;
+    public float airControl = 0.5f;
 
-    [Header("Jump/Gravity")]
-    public float jumpForce=8f;
-    public float gravity=22f;
+    [Header("Jump / Gravity")]
+    public float jumpForce = 8f;
+    public float gravity = 22f;
 
     [Header("Mouse")]
     public Transform playerCamera;
-    public float mouseSensitivity=2f;
+    public float mouseSensitivity = 2f;
 
-    [Header("Mining Placeholder")]
-    public float mineDistance=6f;
+    [Header("Mining")]
+    public float mineDistance = 6f;
 
     CharacterController controller;
 
@@ -29,16 +29,13 @@ public class PlayerController3D : MonoBehaviour
 
     void Start()
     {
-        controller=
-            GetComponent<CharacterController>();
+        controller = GetComponent<CharacterController>();
 
-        if(playerCamera==null)
-            playerCamera=
-                Camera.main.transform;
+        if (playerCamera == null)
+            playerCamera = Camera.main.transform;
 
-        Cursor.lockState=
-            CursorLockMode.Locked;
-        Cursor.visible=false;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void Update()
@@ -46,136 +43,104 @@ public class PlayerController3D : MonoBehaviour
         Look();
         Move();
         ApplyGravity();
-        MiningPlaceholder();
-        VoidRescue();
+        Mine();
+        VoidCheck();
     }
 
+    
     void Look()
     {
-        float mx=
-            Input.GetAxis("Mouse X")
-            *mouseSensitivity;
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        float my=
-            Input.GetAxis("Mouse Y")
-            *mouseSensitivity;
+        transform.Rotate(Vector3.up * mouseX);
 
-        transform.Rotate(
-            Vector3.up*mx
-        );
+        pitch -= mouseY;
+        pitch = Mathf.Clamp(pitch, -89f, 89f);
 
-        pitch-=my;
-        pitch=Mathf.Clamp(
-            pitch,-89,89
-        );
-
-        playerCamera.localRotation=
-            Quaternion.Euler(
-                pitch,0,0
-            );
+        playerCamera.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
+    
     void Move()
     {
-        float x=
-            Input.GetAxisRaw(
-                "Horizontal");
+        float x = Input.GetAxisRaw("Horizontal");
+        float z = Input.GetAxisRaw("Vertical");
 
-        float z=
-            Input.GetAxisRaw(
-                "Vertical");
+        Vector3 input =
+            (transform.right * x +
+             transform.forward * z).normalized;
 
-        Vector3 input=
-            (
-             transform.right*x+
-             transform.forward*z
-            ).normalized;
+        float speed =
+            Input.GetKey(KeyCode.LeftShift)
+            ? sprintSpeed
+            : moveSpeed;
 
-        float speed=
-            Input.GetKey(
-                KeyCode.LeftShift)
-                ?
-                sprintSpeed:
-                moveSpeed;
-
-        float control=
+        float control =
             controller.isGrounded
-            ?
-            acceleration
-            :
-            acceleration*airControl;
+            ? acceleration
+            : acceleration * airControl;
 
-        Vector3 target=
-            input*speed;
+        Vector3 targetMove = input * speed;
 
-        moveDirection=
-            Vector3.Lerp(
-                moveDirection,
-                target,
-                control*
-                Time.deltaTime
-            );
+        moveDirection = Vector3.Lerp(
+            moveDirection,
+            targetMove,
+            control * Time.deltaTime
+        );
 
-        if(controller.isGrounded)
+        if (controller.isGrounded)
         {
-            if(velocity.y<0)
-                velocity.y=-2;
+            if (velocity.y < 0)
+                velocity.y = -2f;
 
-            if(Input.GetButtonDown(
-                "Jump"))
-                velocity.y=
-                    jumpForce;
+            if (Input.GetButtonDown("Jump"))
+                velocity.y = jumpForce;
         }
 
-        Vector3 finalMove=
-            moveDirection+
-            Vector3.up*
-            velocity.y;
+        Vector3 finalMove =
+            moveDirection +
+            Vector3.up * velocity.y;
 
-        controller.Move(
-            finalMove*
-            Time.deltaTime
-        );
+        controller.Move(finalMove * Time.deltaTime);
     }
 
+    
     void ApplyGravity()
     {
-        velocity.y-=
-            gravity*
-            Time.deltaTime;
+        velocity.y -= gravity * Time.deltaTime;
     }
 
-    void VoidRescue()
+    
+    void Mine()
     {
-        if(transform.position.y<-20)
+        if (!Input.GetMouseButtonDown(0))
+            return;
+
+        Ray ray = new Ray(
+            playerCamera.position,
+            playerCamera.forward
+        );
+
+        if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
         {
-            transform.position=
-                new Vector3(
-                    512,100,512
-                );
+            VoxelChunk chunk =
+                hit.collider.GetComponent<VoxelChunk>();
+
+            if (chunk != null)
+            {
+                chunk.RemoveBlock(hit.point);
+            }
         }
     }
 
-    void MiningPlaceholder()
-    {
-        if(Input.GetMouseButtonDown(0))
-        {
-            Ray ray=
-                new Ray(
-                    playerCamera.position,
-                    playerCamera.forward
-                );
 
-            if(Physics.Raycast(
-                ray,
-                out RaycastHit hit,
-                mineDistance))
-            {
-                Debug.Log(
-                 "Mining hit "+
-                  hit.point
-                );
-            }
+    void VoidCheck()
+    {
+        if (transform.position.y < -20f)
+        {
+            transform.position = new Vector3(512, 120, 512);
+            velocity = Vector3.zero;
         }
     }
 }
