@@ -19,7 +19,7 @@ void PreventClipping()
 {
     if (playerCamera == null) return;
 
-    // Define head position properly
+    
     Vector3 headPos = transform.position + Vector3.up * 1.6f;
 
     Ray ray = new Ray(headPos, playerCamera.forward);

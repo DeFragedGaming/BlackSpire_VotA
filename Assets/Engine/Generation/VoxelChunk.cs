@@ -50,7 +50,6 @@ public class VoxelChunk : MonoBehaviour
                     voxelMap[x, y, z] = BlockType.Dirt;
                 else
                 {
-                    // Simple ore generation
                     float oreNoise = Mathf.PerlinNoise(worldX * .1f, worldZ * .1f);
 
                     if (oreNoise > 0.75f && y < 50)
@@ -145,12 +144,25 @@ public class VoxelChunk : MonoBehaviour
         int y = Mathf.FloorToInt(local.y);
         int z = Mathf.FloorToInt(local.z);
 
-        if (x < 0 || x >= VoxelData.ChunkWidth ||
-            y < 0 || y >= VoxelData.ChunkHeight ||
-            z < 0 || z >= VoxelData.ChunkWidth)
+        if (!IsVoxelInChunk(new Vector3(x, y, z)))
             return;
 
         voxelMap[x, y, z] = BlockType.Air;
+        BuildMesh();
+    }
+
+    public void PlaceBlock(Vector3 hitPoint, Vector3 normal, BlockType type)
+    {
+        Vector3 local = hitPoint - transform.position + normal * 0.01f;
+
+        int x = Mathf.FloorToInt(local.x);
+        int y = Mathf.FloorToInt(local.y);
+        int z = Mathf.FloorToInt(local.z);
+
+        if (!IsVoxelInChunk(new Vector3(x, y, z)))
+            return;
+
+        voxelMap[x, y, z] = type;
         BuildMesh();
     }
 }

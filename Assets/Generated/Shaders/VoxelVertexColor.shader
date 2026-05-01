@@ -46,11 +46,11 @@ Shader "Custom/VoxelLitVertexColor"
 
             fixed4 frag(v2f i) : SV_Target
             {
-                // Basic directional light
+                
                 float3 lightDir = normalize(_WorldSpaceLightPos0.xyz);
                 float NdotL = max(0, dot(i.normal, lightDir));
 
-                // Ambient + diffuse
+                
                 float lighting = 0.4 + NdotL * 0.6;
 
                 fixed4 col = i.color * lighting * _Brightness;
