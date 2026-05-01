@@ -5,5 +5,8 @@ public enum BlockType
     Dirt,
     Stone,
     CoalOre,
-    IronOre
+    IronOre,
+    Sand,
+    Water,
+    Bedrock
 }

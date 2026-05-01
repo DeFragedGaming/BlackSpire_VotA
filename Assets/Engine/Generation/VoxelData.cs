@@ -3,7 +3,7 @@ using UnityEngine;
 public static class VoxelData
 {
     public const int ChunkWidth = 16;
-    public const int ChunkHeight = 128;
+    public const int ChunkHeight = 800;
 
     public static readonly Vector3[] voxelVerts = new Vector3[8]
     {
@@ -19,12 +19,12 @@ public static class VoxelData
 
     public static readonly int[,] voxelTris = new int[6, 4]
     {
-        {0,3,1,2}, // Back
-        {5,6,4,7}, // Front
-        {3,7,2,6}, // Top
-        {1,5,0,4}, // Bottom
-        {4,7,0,3}, // Left
-        {1,2,5,6}  // Right
+        {0,3,1,2},
+        {5,6,4,7},
+        {3,7,2,6},
+        {1,5,0,4},
+        {4,7,0,3},
+        {1,2,5,6}
     };
 
     public static readonly Vector3[] faceChecks = new Vector3[6]

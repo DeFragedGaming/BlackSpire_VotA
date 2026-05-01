@@ -88,7 +88,6 @@ public class PlayerController3D : MonoBehaviour
         }
 
         Vector3 finalMove = moveDirection + Vector3.up * velocity.y;
-
         controller.Move(finalMove * Time.deltaTime);
     }
 
@@ -99,37 +98,29 @@ public class PlayerController3D : MonoBehaviour
 
     void Mine()
     {
-        if (!Input.GetMouseButtonDown(0))
-            return;
+        if (!Input.GetMouseButtonDown(0)) return;
 
         Ray ray = new Ray(playerCamera.position, playerCamera.forward);
 
-        if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit, mineDistance))
         {
-            VoxelChunk chunk = hit.collider.GetComponent<VoxelChunk>();
-
-            if (chunk != null)
-            {
-                VoxelWorld.Instance.RemoveBlock(hit.point, hit.normal);
-            }
+            Vector3 pos = hit.point - hit.normal * 0.01f;
+            VoxelWorld.Instance.RemoveBlock(pos);
         }
     }
 
     void Place()
     {
-        if (!Input.GetMouseButtonDown(1))
-            return;
+        if (!Input.GetMouseButtonDown(1)) return;
 
         Ray ray = new Ray(playerCamera.position, playerCamera.forward);
 
-        if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit, mineDistance))
         {
-            VoxelChunk chunk = hit.collider.GetComponent<VoxelChunk>();
-
-            if (chunk != null)
-            {
-                VoxelWorld.Instance.PlaceBlock(hit.point, hit.normal, selectedBlock);
-            }
+            Vector3 pos = hit.point + hit.normal * 0.01f;
+            VoxelWorld.Instance.PlaceBlock(pos, selectedBlock);
         }
     }
 
@@ -147,36 +138,29 @@ public class PlayerController3D : MonoBehaviour
     }
 
     void UpdateHighlight()
-{
-    Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-
-    if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
     {
-        VoxelChunk chunk = hit.collider.GetComponent<VoxelChunk>();
+        if (highlightCube == null) return;
 
-        if (chunk != null && highlightCube != null)
+        Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+
+        RaycastHit hit;
+        if (Physics.Raycast(ray, out hit, mineDistance))
         {
             highlightCube.SetActive(true);
 
-            Vector3 local = hit.point - chunk.transform.position;
+            Vector3 pos = hit.point - hit.normal * 0.01f;
 
-            local -= hit.normal * 0.5f;
-
-            int x = Mathf.FloorToInt(local.x);
-            int y = Mathf.FloorToInt(local.y);
-            int z = Mathf.FloorToInt(local.z);
-
-            Vector3 world = new Vector3(x, y, z) + chunk.transform.position;
-
-            highlightCube.transform.position = world + Vector3.one * 0.5f;
+            highlightCube.transform.position = new Vector3(
+                Mathf.Floor(pos.x) + 0.5f,
+                Mathf.Floor(pos.y) + 0.5f,
+                Mathf.Floor(pos.z) + 0.5f
+            );
+        }
+        else
+        {
+            highlightCube.SetActive(false);
         }
     }
-    else
-    {
-        if (highlightCube != null)
-            highlightCube.SetActive(false);
-    }
-}
 
     void VoidCheck()
     {

@@ -7,59 +7,67 @@ public class VoxelChunk : MonoBehaviour
 {
     public Vector2Int chunkCoord;
 
+    int chunkSize;
+    int worldHeight;
+    Material mat;
+    VoxelWorld world;
+
     BlockType[,,] voxelMap;
 
-    List<Vector3> vertices = new();
-    List<int> triangles = new();
-    List<Color> colors = new();
+    List<Vector3> vertices = new List<Vector3>();
+    List<int> triangles = new List<int>();
+    List<Color> colors = new List<Color>();
 
     int vertexIndex;
 
-    public void Init(Vector2Int coord)
+    public void Init(Vector2Int coord, int size, int height, Material material, VoxelWorld worldRef)
     {
         chunkCoord = coord;
+        chunkSize = size;
+        worldHeight = height;
+        mat = material;
+        world = worldRef;
 
-        voxelMap = new BlockType[
-            VoxelData.ChunkWidth,
-            VoxelData.ChunkHeight,
-            VoxelData.ChunkWidth
-        ];
+        GetComponent<MeshRenderer>().material = mat;
 
-        VoxelWorld.Instance.RegisterChunk(coord, this);
+        voxelMap = new BlockType[chunkSize, worldHeight, chunkSize];
+
+        GenerateVoxelMap();
+        BuildMesh();
+    }
+
+    public void Rebuild()
+    {
         GenerateVoxelMap();
         BuildMesh();
     }
 
     void GenerateVoxelMap()
     {
-        for (int x = 0; x < VoxelData.ChunkWidth; x++)
-        for (int z = 0; z < VoxelData.ChunkWidth; z++)
+        for (int x = 0; x < chunkSize; x++)
+        for (int z = 0; z < chunkSize; z++)
         {
-            int worldX = x + chunkCoord.x * VoxelData.ChunkWidth;
-            int worldZ = z + chunkCoord.y * VoxelData.ChunkWidth;
+            int worldX = x + chunkCoord.x * chunkSize;
+            int worldZ = z + chunkCoord.y * chunkSize;
 
-            float heightNoise = Mathf.PerlinNoise(worldX * .03f, worldZ * .03f) * 20f;
-            int height = Mathf.FloorToInt(40 + heightNoise);
-
-            for (int y = 0; y < VoxelData.ChunkHeight; y++)
+            for (int y = 0; y < worldHeight; y++)
             {
-                if (y > height)
-                    voxelMap[x, y, z] = BlockType.Air;
-                else if (y == height)
-                    voxelMap[x, y, z] = BlockType.Grass;
-                else if (y > height - 4)
-                    voxelMap[x, y, z] = BlockType.Dirt;
-                else
-                {
-                    float oreNoise = Mathf.PerlinNoise(worldX * .1f, worldZ * .1f);
+                int worldY = y;
+                Vector3Int wp = new Vector3Int(worldX, worldY, worldZ);
 
-                    if (oreNoise > 0.75f && y < 50)
-                        voxelMap[x, y, z] = BlockType.IronOre;
-                    else if (oreNoise > 0.65f && y < 40)
-                        voxelMap[x, y, z] = BlockType.CoalOre;
-                    else
-                        voxelMap[x, y, z] = BlockType.Stone;
+                if (world != null && world.IsBlockRemoved(wp))
+                {
+                    voxelMap[x, y, z] = BlockType.Air;
+                    continue;
                 }
+
+                if (world != null && world.TryGetPlacedBlock(wp, out BlockType placed))
+                {
+                    voxelMap[x, y, z] = placed;
+                    continue;
+                }
+
+                voxelMap[x, y, z] = TerrainGenerator.GetBlock(worldX, worldY, worldZ);
             }
         }
     }
@@ -71,12 +79,12 @@ public class VoxelChunk : MonoBehaviour
         colors.Clear();
         vertexIndex = 0;
 
-        for (int x = 0; x < VoxelData.ChunkWidth; x++)
-        for (int y = 0; y < VoxelData.ChunkHeight; y++)
-        for (int z = 0; z < VoxelData.ChunkWidth; z++)
+        for (int x = 0; x < chunkSize; x++)
+        for (int y = 0; y < worldHeight; y++)
+        for (int z = 0; z < chunkSize; z++)
         {
             if (voxelMap[x, y, z] != BlockType.Air)
-                AddVoxelData(new Vector3(x, y, z));
+                AddVoxel(new Vector3(x, y, z));
         }
 
         Mesh mesh = new Mesh();
@@ -95,29 +103,29 @@ public class VoxelChunk : MonoBehaviour
         col.sharedMesh = mesh;
     }
 
-    void AddVoxelData(Vector3 pos)
+    void AddVoxel(Vector3 pos)
     {
         for (int i = 0; i < 6; i++)
         {
-            Vector3 neighbor = pos + VoxelData.faceChecks[i];
+            Vector3 n = pos + VoxelData.faceChecks[i];
 
-            if (!IsVoxelInChunk(neighbor) ||
-                voxelMap[(int)neighbor.x, (int)neighbor.y, (int)neighbor.z] == BlockType.Air)
+            if (!InChunk(n) ||
+                voxelMap[(int)n.x, (int)n.y, (int)n.z] == BlockType.Air)
             {
                 AddFace(pos, i);
             }
         }
     }
 
-    void AddFace(Vector3 pos, int faceIndex)
+    void AddFace(Vector3 pos, int face)
     {
-        Color col = BlockColors.GetColor(
-            voxelMap[(int)pos.x, (int)pos.y, (int)pos.z]);
+        BlockType type = voxelMap[(int)pos.x, (int)pos.y, (int)pos.z];
+        Color c = BlockColors.GetColor(type);
 
         for (int i = 0; i < 4; i++)
         {
-            vertices.Add(pos + VoxelData.voxelVerts[VoxelData.voxelTris[faceIndex, i]]);
-            colors.Add(col);
+            vertices.Add(pos + VoxelData.voxelVerts[VoxelData.voxelTris[face, i]]);
+            colors.Add(c);
         }
 
         triangles.Add(vertexIndex + 0);
@@ -130,40 +138,10 @@ public class VoxelChunk : MonoBehaviour
         vertexIndex += 4;
     }
 
-    bool IsVoxelInChunk(Vector3 pos)
+    bool InChunk(Vector3 p)
     {
-        return pos.x >= 0 && pos.x < VoxelData.ChunkWidth &&
-               pos.y >= 0 && pos.y < VoxelData.ChunkHeight &&
-               pos.z >= 0 && pos.z < VoxelData.ChunkWidth;
-    }
-
-    public void RemoveBlock(Vector3 hitPoint, Vector3 normal)
-    {
-        Vector3 local = hitPoint - transform.position - normal * 0.01f;
-
-        int x = Mathf.FloorToInt(local.x);
-        int y = Mathf.FloorToInt(local.y);
-        int z = Mathf.FloorToInt(local.z);
-
-        if (!IsVoxelInChunk(new Vector3(x, y, z)))
-            return;
-
-        voxelMap[x, y, z] = BlockType.Air;
-        BuildMesh();
-    }
-
-    public void PlaceBlock(Vector3 hitPoint, Vector3 normal, BlockType type)
-    {
-        Vector3 local = hitPoint - transform.position + normal * 0.01f;
-
-        int x = Mathf.FloorToInt(local.x);
-        int y = Mathf.FloorToInt(local.y);
-        int z = Mathf.FloorToInt(local.z);
-
-        if (!IsVoxelInChunk(new Vector3(x, y, z)))
-            return;
-
-        voxelMap[x, y, z] = type;
-        BuildMesh();
+        return p.x >= 0 && p.x < chunkSize &&
+               p.y >= 0 && p.y < worldHeight &&
+               p.z >= 0 && p.z < chunkSize;
     }
 }
