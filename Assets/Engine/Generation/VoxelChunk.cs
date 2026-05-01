@@ -25,6 +25,7 @@ public class VoxelChunk : MonoBehaviour
             VoxelData.ChunkWidth
         ];
 
+        VoxelWorld.Instance.RegisterChunk(coord, this);
         GenerateVoxelMap();
         BuildMesh();
     }

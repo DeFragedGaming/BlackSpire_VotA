@@ -3,24 +3,19 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController3D : MonoBehaviour
 {
-    [Header("Movement")]
     public float moveSpeed = 5.5f;
     public float sprintSpeed = 7.5f;
     public float acceleration = 14f;
     public float airControl = 0.5f;
 
-    [Header("Jump / Gravity")]
     public float jumpForce = 8f;
     public float gravity = 22f;
 
-    [Header("Mouse")]
     public Transform playerCamera;
     public float mouseSensitivity = 2f;
 
-    [Header("Mining")]
     public float mineDistance = 6f;
 
-    [Header("Block System")]
     public GameObject highlightCube;
     public BlockType selectedBlock = BlockType.Grass;
 
@@ -57,7 +52,6 @@ public class PlayerController3D : MonoBehaviour
         VoidCheck();
     }
 
-    
     void Look()
     {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
@@ -71,7 +65,6 @@ public class PlayerController3D : MonoBehaviour
         playerCamera.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
-    
     void Move()
     {
         float x = Input.GetAxisRaw("Horizontal");
@@ -104,7 +97,6 @@ public class PlayerController3D : MonoBehaviour
         velocity.y -= gravity * Time.deltaTime;
     }
 
-    
     void Mine()
     {
         if (!Input.GetMouseButtonDown(0))
@@ -118,12 +110,11 @@ public class PlayerController3D : MonoBehaviour
 
             if (chunk != null)
             {
-                chunk.RemoveBlock(hit.point, hit.normal);
+                VoxelWorld.Instance.RemoveBlock(hit.point, hit.normal);
             }
         }
     }
 
-    
     void Place()
     {
         if (!Input.GetMouseButtonDown(1))
@@ -137,12 +128,11 @@ public class PlayerController3D : MonoBehaviour
 
             if (chunk != null)
             {
-                chunk.PlaceBlock(hit.point, hit.normal, selectedBlock);
+                VoxelWorld.Instance.PlaceBlock(hit.point, hit.normal, selectedBlock);
             }
         }
     }
 
-    
     void HandleHotbar()
     {
         if (Input.GetKeyDown(KeyCode.Alpha1)) selectedBlock = BlockType.Grass;
@@ -156,34 +146,38 @@ public class PlayerController3D : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Alpha9)) selectedBlock = BlockType.Stone;
     }
 
-    
     void UpdateHighlight()
+{
+    Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+
+    if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
     {
-        Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+        VoxelChunk chunk = hit.collider.GetComponent<VoxelChunk>();
 
-        if (Physics.Raycast(ray, out RaycastHit hit, mineDistance))
+        if (chunk != null && highlightCube != null)
         {
-            if (highlightCube != null)
-            {
-                highlightCube.SetActive(true);
+            highlightCube.SetActive(true);
 
-                Vector3 pos = hit.point + hit.normal * 0.01f;
+            Vector3 local = hit.point - chunk.transform.position;
 
-                highlightCube.transform.position = new Vector3(
-                    Mathf.Floor(pos.x) + 0.5f,
-                    Mathf.Floor(pos.y) + 0.5f,
-                    Mathf.Floor(pos.z) + 0.5f
-                );
-            }
-        }
-        else
-        {
-            if (highlightCube != null)
-                highlightCube.SetActive(false);
+            local -= hit.normal * 0.5f;
+
+            int x = Mathf.FloorToInt(local.x);
+            int y = Mathf.FloorToInt(local.y);
+            int z = Mathf.FloorToInt(local.z);
+
+            Vector3 world = new Vector3(x, y, z) + chunk.transform.position;
+
+            highlightCube.transform.position = world + Vector3.one * 0.5f;
         }
     }
+    else
+    {
+        if (highlightCube != null)
+            highlightCube.SetActive(false);
+    }
+}
 
-    
     void VoidCheck()
     {
         if (transform.position.y < -20f)
