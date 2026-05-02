@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 public class VoxelWorld : MonoBehaviour
@@ -11,11 +12,18 @@ public class VoxelWorld : MonoBehaviour
     public int chunkSize = VoxelData.ChunkWidth;
     public int worldHeight = VoxelData.ChunkHeight;
     public int viewDistance = 5;
+    public int maxThreads = 2;
 
-    Dictionary<Vector2Int, VoxelChunk> chunks = new Dictionary<Vector2Int, VoxelChunk>();
+    Dictionary<Vector2Int, VoxelChunk> chunks = new();
+    HashSet<Vector2Int> building = new();
 
-    HashSet<Vector3Int> removedBlocks = new HashSet<Vector3Int>();
-    Dictionary<Vector3Int, BlockType> placedBlocks = new Dictionary<Vector3Int, BlockType>();
+    Queue<Vector2Int> requestQueue = new();
+    Queue<ChunkMeshData> completedQueue = new();
+
+    HashSet<Vector3Int> removedBlocks = new();
+    Dictionary<Vector3Int, BlockType> placedBlocks = new();
+
+    int activeThreads = 0;
 
     void Awake()
     {
@@ -24,33 +32,141 @@ public class VoxelWorld : MonoBehaviour
 
     void Update()
     {
-        if (player == null) return;
+        if (!player) return;
 
-        Vector2Int pc = new Vector2Int(
+        Vector2Int pc = new(
             Mathf.FloorToInt(player.position.x / chunkSize),
             Mathf.FloorToInt(player.position.z / chunkSize)
         );
 
-        for (int x = -viewDistance; x <= viewDistance; x++)
-        for (int z = -viewDistance; z <= viewDistance; z++)
-        {
-            Vector2Int coord = new Vector2Int(pc.x + x, pc.y + z);
+        QueueChunks(pc);
+        StartThreads();
+        ApplyCompleted();
+    }
 
-            if (!chunks.ContainsKey(coord))
-                CreateChunk(coord);
+    void QueueChunks(Vector2Int center)
+    {
+        for (int r = 0; r <= viewDistance; r++)
+        {
+            for (int x = -r; x <= r; x++)
+            for (int z = -r; z <= r; z++)
+            {
+                if (Mathf.Abs(x) != r && Mathf.Abs(z) != r) continue;
+
+                Vector2Int coord = new(center.x + x, center.y + z);
+
+                if (chunks.ContainsKey(coord)) continue;
+                if (building.Contains(coord)) continue;
+
+                requestQueue.Enqueue(coord);
+                building.Add(coord);
+            }
         }
     }
 
-    void CreateChunk(Vector2Int coord)
+    void StartThreads()
     {
-        GameObject obj = new GameObject($"Chunk_{coord.x}_{coord.y}");
-        obj.transform.position = new Vector3(coord.x * chunkSize, 0, coord.y * chunkSize);
-        obj.transform.parent = transform;
+        while (requestQueue.Count > 0 && activeThreads < maxThreads)
+        {
+            Vector2Int coord = requestQueue.Dequeue();
+            Interlocked.Increment(ref activeThreads);
+            ThreadPool.QueueUserWorkItem(_ => BuildChunk(coord));
+        }
+    }
 
-        VoxelChunk chunk = obj.AddComponent<VoxelChunk>();
-        chunk.Init(coord, chunkSize, worldHeight, material, this);
+    void BuildChunk(Vector2Int coord)
+    {
+        bool[,,] playerMap;
+        BlockType[,,] map = GenerateVoxelMap(coord, out playerMap);
 
-        chunks.Add(coord, chunk);
+        List<Vector3> verts = new();
+        List<int> tris = new();
+        List<Color> colors = new();
+
+        GreedyMesher.GenerateMesh(map, playerMap, chunkSize, worldHeight, verts, tris, colors);
+
+        ChunkMeshData data = new()
+        {
+            verts = verts.ToArray(),
+            tris = tris.ToArray(),
+            colors = colors.ToArray(),
+            coord = coord
+        };
+
+        lock (completedQueue)
+        {
+            completedQueue.Enqueue(data);
+        }
+
+        Interlocked.Decrement(ref activeThreads);
+    }
+
+    void ApplyCompleted()
+    {
+        lock (completedQueue)
+        {
+            while (completedQueue.Count > 0)
+            {
+                var data = completedQueue.Dequeue();
+
+                GameObject obj = new($"Chunk_{data.coord.x}_{data.coord.y}");
+                obj.transform.position = new Vector3(data.coord.x * chunkSize, 0, data.coord.y * chunkSize);
+                obj.transform.parent = transform;
+
+                var chunk = obj.AddComponent<VoxelChunk>();
+
+                var mr = obj.GetComponent<MeshRenderer>();
+                mr.material = material;
+
+                Mesh mesh = new Mesh();
+                mesh.vertices = data.verts;
+                mesh.triangles = data.tris;
+                mesh.colors = data.colors;
+                mesh.RecalculateNormals();
+
+                chunk.ApplyMesh(mesh);
+
+                chunks[data.coord] = chunk;
+                building.Remove(data.coord);
+            }
+        }
+    }
+
+    BlockType[,,] GenerateVoxelMap(Vector2Int coord, out bool[,,] playerMap)
+    {
+        BlockType[,,] map = new BlockType[chunkSize, worldHeight, chunkSize];
+        playerMap = new bool[chunkSize, worldHeight, chunkSize];
+
+        for (int x = 0; x < chunkSize; x++)
+        for (int z = 0; z < chunkSize; z++)
+        {
+            int worldX = coord.x * chunkSize + x;
+            int worldZ = coord.y * chunkSize + z;
+
+            for (int y = 0; y < worldHeight; y++)
+            {
+                Vector3Int worldPos = new(worldX, y, worldZ);
+
+                if (removedBlocks.Contains(worldPos))
+                {
+                    map[x, y, z] = BlockType.Air;
+                    playerMap[x, y, z] = false;
+                    continue;
+                }
+
+                if (placedBlocks.TryGetValue(worldPos, out BlockType placed))
+                {
+                    map[x, y, z] = placed;
+                    playerMap[x, y, z] = true;
+                    continue;
+                }
+
+                map[x, y, z] = TerrainGenerator.GetBlock(worldX, y, worldZ);
+                playerMap[x, y, z] = false;
+            }
+        }
+
+        return map;
     }
 
     public void RemoveBlock(Vector3 pos)
@@ -58,7 +174,7 @@ public class VoxelWorld : MonoBehaviour
         Vector3Int p = Vector3Int.FloorToInt(pos);
         removedBlocks.Add(p);
         placedBlocks.Remove(p);
-        RefreshChunk(p);
+        RebuildChunk(p);
     }
 
     public void PlaceBlock(Vector3 pos, BlockType type)
@@ -66,21 +182,20 @@ public class VoxelWorld : MonoBehaviour
         Vector3Int p = Vector3Int.FloorToInt(pos);
         placedBlocks[p] = type;
         removedBlocks.Remove(p);
-        RefreshChunk(p);
+        RebuildChunk(p);
     }
 
-    public bool IsBlockRemoved(Vector3Int p) => removedBlocks.Contains(p);
-
-    public bool TryGetPlacedBlock(Vector3Int p, out BlockType type) => placedBlocks.TryGetValue(p, out type);
-
-    void RefreshChunk(Vector3Int p)
+    void RebuildChunk(Vector3Int p)
     {
-        Vector2Int c = new Vector2Int(
+        Vector2Int coord = new(
             Mathf.FloorToInt((float)p.x / chunkSize),
             Mathf.FloorToInt((float)p.z / chunkSize)
         );
 
-        if (chunks.TryGetValue(c, out VoxelChunk chunk))
-            chunk.Rebuild();
+        if (!building.Contains(coord))
+        {
+            requestQueue.Enqueue(coord);
+            building.Add(coord);
+        }
     }
 }
